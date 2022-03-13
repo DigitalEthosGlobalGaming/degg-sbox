@@ -26,7 +26,8 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          registries: degg-sbox
+          # A comma-delimited list of AWS account IDs that are associated with the ECR registries. If you do not specify a registry, the default ECR registry is assumed.
+          registries: 475144453288
 
       - name: Build, tag, and push the image to Amazon ECR
         id: build-image
