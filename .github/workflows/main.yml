@@ -30,6 +30,7 @@ jobs:
           ECR_REGISTRY: public.ecr.aws/i7v8z0s2
           ECR_REPOSITORY: degg-sbox
           IMAGE_TAG: latest
+          
 
         run: |
           aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin $ECR_REGISTRY
