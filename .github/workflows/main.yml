@@ -27,13 +27,15 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          DOCKER_REGISTRY: 475144453288
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REGISTRY: 475144453288.dkr.ecr.ap-southeast-2.amazonaws.com
           ECR_REPOSITORY: degg-sbox
           IMAGE_TAG: ${{ github.sha }}
 
-        run:
-          aws ecr get-login-password | docker login --username AWS --password-stdin $DOCKER_REGISTRY
+        run: |
+          aws ecr get-login-password | docker login --username AWS --password-stdin $ECR_REGISTRY
           docker build -t degg-sbox .
-          docker tag degg-sbox:latest 475144453288.dkr.ecr.ap-southeast-2.amazonaws.com/degg-sbox:latest
-          docker push 475144453288.dkr.ecr.ap-southeast-2.amazonaws.com/degg-sbox:latest
+          # Build a docker container and push it to ECR
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          echo "Pushing image to ECR..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
