@@ -25,13 +25,15 @@ jobs:
       - name: Build, tag, and push the image to Amazon ECR
         id: build-image
         env:
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_ACCESS_SECRET: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          DOCKER_REGISTRY: 475144453288
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: degg-sbox
           IMAGE_TAG: ${{ github.sha }}
+
         run:
-          aws ecr get-login-password --region ap-southeast-2 | docker login --username AWS --password-stdin 475144453288.dkr.ecr.ap-southeast-2.amazonaws.com
+          aws ecr get-login-password | docker login --username AWS --password-stdin $DOCKER_REGISTRY
           docker build -t degg-sbox .
           docker tag degg-sbox:latest 475144453288.dkr.ecr.ap-southeast-2.amazonaws.com/degg-sbox:latest
           docker push 475144453288.dkr.ecr.ap-southeast-2.amazonaws.com/degg-sbox:latest
