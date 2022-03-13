@@ -38,7 +38,7 @@ jobs:
           echo $ECR_REGISTRY
 
           echo "Repository"
-          $ECR_REPOSITORY
+          echo $ECR_REPOSITORY
 
           echo "Image Tag"
           echo $IMAGE_TAG
