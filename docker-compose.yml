@@ -4,13 +4,12 @@ services:
   server:
     build: .
     container_name: degg-sbox
-    command: npm run dev
     working_dir: /opt/app-root
     volumes:
-      - ./:/opt/app-root
-      - /usr/app/node_modules
+      - ./src:/opt/app-root/src
+      - .env:/opt/app-root/.env
     ports:
+      - "80:80"
+      - "443:443"
       - "8080:8080"
       - "8443:8443"
-    depends_on:
-      - database

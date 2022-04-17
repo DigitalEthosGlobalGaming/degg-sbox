@@ -1,2 +1,4 @@
 node_modules
+.vscode
+.github
 npm-debug.log

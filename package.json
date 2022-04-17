@@ -4,7 +4,7 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "start": "",
+        "start": "nodemon ./src/server.ts",
         "build": "tsc",
         "update-db": "prisma db pull && prisma generate",
         "dev": "concurrently --kill-others --names \"BUILD,RUN\" -c \"bgBlue.bold,bgMagenta.bold\" \"tsc -w\" \"nodemon -q -w dist dist/server.js\"",
@@ -17,9 +17,10 @@
     "dependencies": {
         "@prisma/client": "3.4.2",
         "@types/three": "^0.134.0",
-        "bcrypt-nodejs": "^0.0.3",
+        "bcryptjs": "^2.4.3",
         "chroma.ts": "^1.0.10",
         "dotenv": "^16.0.0",
+        "express": "^4.17.3",
         "moment": "^2.29.1",
         "react": "^17.0.2",
         "react-dom": "^17.0.2",

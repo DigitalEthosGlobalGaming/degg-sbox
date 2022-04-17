@@ -5,6 +5,10 @@ import { Uuid, uuidV4 } from "./helpers/uuid";
 import { fireEvent, subscribe, unsubscribe } from "./subscriptions/subscription";
 import { EventPayload } from "./types/event";
 
+const express = require('express');
+const app = express();
+const appPort = 80;
+
 export type WebServer = {
     wss: WebSocketServer;
     connections: { [key: Uuid]: WebSocket }
@@ -27,8 +31,17 @@ export type CustomWebsocket = WebSocket & {
 
 
 export async function startServer() {
-    let port = 8080;
 
+
+    app.get('/', (req, res) => {
+        res.send('Hello World!')
+    })
+
+    app.listen(appPort, () => {
+        console.log("http server up");
+    });
+
+    let port = 8080;
 
     const webServer: WebServer = {
         connections: {},
@@ -171,5 +184,6 @@ export async function startServer() {
 
     });
 }
+
 
 startServer();

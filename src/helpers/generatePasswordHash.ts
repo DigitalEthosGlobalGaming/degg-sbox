@@ -1,5 +1,5 @@
 
-let bcrypt = require("bcrypt-nodejs");
+let bcrypt = require("bcryptjs");
 
 export function generatePasswordHash(password: string) {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
