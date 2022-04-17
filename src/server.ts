@@ -1,72 +1,121 @@
+import { Organisation } from "@prisma/client";
 import { WebSocket, WebSocketServer } from "ws";
-import { uuid } from "./helpers/uuid";
-
-
+import { HandleEvent } from "./eventHandler";
+import { Uuid, uuidV4 } from "./helpers/uuid";
+import { fireEvent, subscribe, unsubscribe } from "./subscriptions/subscription";
+import { EventPayload } from "./types/event";
 
 export type WebServer = {
     wss: WebSocketServer;
+    connections: { [key: Uuid]: WebSocket }
 }
 
 export type CustomWebsocket = WebSocket & {
-    playerId: string | null;
+    server: WebServer;
+    connectionId: string;
+    organisation: Organisation;
+    subscriptions: {},
+    fire: (topic: string, data: any) => void;
+    subscribe: (topic: string, id?: string) => void;
+    unSubscribe: (topic: string, id?: string) => void;
+    unSubscribeAll: () => void;
     sendData: (data: any) => void
     event: (type: string, message?: any, callbackId?: any) => void
     error: (message: string, callbackId: any) => void
     sendFunc: (callback: () => Promise<any>) => void
 }
 
-const serverId = uuid();
 
-export function startServer() {
+export async function startServer() {
     let port = 8080;
 
+
     const webServer: WebServer = {
+        connections: {},
         wss: new WebSocketServer({
             port: port,
-            perMessageDeflate: {
-                zlibDeflateOptions: {
-                    // See zlib defaults.
-                    chunkSize: 1024,
-                    memLevel: 7,
-                    level: 3
-                },
-                zlibInflateOptions: {
-                    chunkSize: 10 * 1024
-                },
-                // Other options settable:
-                clientNoContextTakeover: true, // Defaults to negotiated value.
-                serverNoContextTakeover: true, // Defaults to negotiated value.
-                serverMaxWindowBits: 10, // Defaults to negotiated value.
-                // Below options specified as default values.
-                concurrencyLimit: 10, // Limits zlib concurrency for perf.
-                threshold: 1024 // Size (in bytes) below which messages
-                // should not be compressed if context takeover is disabled.
-            }
         }),
-
     }
-
 
     webServer.wss.on("listening", () => {
         console.log(`Websocket listening on port ${port}`);
     });
 
-
     webServer.wss.on('connection', function connection(ws: CustomWebsocket) {
-        console.log("Connect");
+        ws.server = webServer;
+
+        ws.connectionId = uuidV4();
+        webServer.connections[ws.connectionId] = ws;
+        ws.organisation = null;
+
+        ws.fire = (topic: string, data: any) => {
+            var organisationId = ws?.organisation?.id;
+            if (organisationId != null) {
+                console.log(topic, data);
+                fireEvent(`${organisationId}.${topic}`, data);
+            }
+        }
+
+        ws.subscribe = (topic: string, id: string = null) => {
+            var organisationId = ws?.organisation?.id;
+            if (organisationId != null) {
+                var id = subscribe(`${organisationId}.${topic}`, (data) => {
+                    ws.event(topic, data);
+                }, id);
+
+                if (ws.subscriptions == null) {
+                    ws.subscriptions = [];
+                }
+
+                if (ws.subscriptions[topic] == null) {
+                    ws.subscriptions[topic] = [];
+                }
+
+                ws.subscriptions[topic].push(id);
+            }
+        }
+
+        ws.unSubscribe = (topic: string, id: string = null) => {
+            var organisationId = ws?.organisation?.id;
+            if (organisationId != null) {
+                unsubscribe(id);
+                if (ws.subscriptions?.[topic] != null) {
+                    for (var i = 0; i < ws.subscriptions[topic].length; i++) {
+
+                        if (ws.subscriptions[topic][i] === id) {
+                            ws.subscriptions[topic].splice(i, 1);
+                        }
+                    }
+                }
+
+                ws.subscriptions[topic].push(id);
+            }
+        }
+
+        ws.unSubscribeAll = () => {
+            for (var i in ws.subscriptions) {
+                for (var b in ws.subscriptions[i]) {
+                    unsubscribe(ws.subscriptions[i][b]);
+                }
+            }
+            ws.subscriptions = {};
+        }
+
         if (ws.sendData == null) {
             ws.sendData = (data) => {
+                ws.binaryType = "arraybuffer";
                 let payload = JSON.stringify(data);
                 ws.send(payload);
             }
         }
 
         if (ws.event == null) {
-            ws.event = (type: string, message: any, callbackId: any) => {
+            ws.event = (type: string, data: any, callbackId: any) => {
                 ws.sendData({
-                    type: type,
-                    message: message,
-                    callbackId: callbackId
+                    Id: "",
+                    CallbackId: callbackId,
+                    Data: JSON.stringify(data),
+                    Type: type,
                 });
             }
         }
@@ -92,27 +141,34 @@ export function startServer() {
         }
 
         ws.on('message', async function incoming(messageRaw: any) {
-            console.log("Here");
-            let message = JSON.parse(messageRaw.toString());
-            console.log(message);
-            let eventType = message?.type;
-            let messageData = message?.data;
-            let callbackId = message?.callbackId;
-            
-
+            let message: EventPayload = JSON.parse(messageRaw.toString());
+            let eventType = message?.Type;
             if (eventType == null) {
                 return;
             }
+            try {
+                message.Data = JSON.parse(message.Data);
+            } catch (e) {
 
-            let playerId = ws?.playerId;
+            }
+            console.log(message);
 
+
+            message.ws = ws;
+            message.organisation = ws.organisation;
+            let result = await HandleEvent(message);
+            result.Data = JSON.stringify(result.Data);
+
+            if (result.CallbackId != null && result.CallbackId != "") {
+                ws.sendData(result);
+            }
         });
 
         ws.on("close", () => {
-            let playerId: any = ws.playerId;
-
+            ws.unSubscribeAll();
+            delete webServer.connections[ws.connectionId];
         })
-        // let player = createPlayer(webServer, ws);
+
     });
 }
 

@@ -2,3 +2,5 @@
 /node_modules
 # next.js
 /dist
+
+.env
