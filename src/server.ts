@@ -5,9 +5,10 @@ import { Uuid, uuidV4 } from "./helpers/uuid";
 import { fireEvent, subscribe, unsubscribe } from "./subscriptions/subscription";
 import { EventPayload } from "./types/event";
 
+const server = require('http').createServer();
 const express = require('express');
 const app = express();
-const appPort = 80;
+const appPort = process?.env?.PORT ?? 8080;
 
 export type WebServer = {
     wss: WebSocketServer;
@@ -30,29 +31,19 @@ export type CustomWebsocket = WebSocket & {
 }
 
 
+
+
 export async function startServer() {
-
-
     app.get('/', (req, res) => {
         res.send('Hello World!')
-    })
-
-    app.listen(appPort, () => {
-        console.log("http server up");
     });
-
-    let port = 8080;
 
     const webServer: WebServer = {
         connections: {},
         wss: new WebSocketServer({
-            port: port,
+            server: server,
         }),
     }
-
-    webServer.wss.on("listening", () => {
-        console.log(`Websocket listening on port ${port}`);
-    });
 
     webServer.wss.on('connection', function connection(ws: CustomWebsocket) {
         ws.server = webServer;
@@ -183,6 +174,14 @@ export async function startServer() {
         })
 
     });
+
+    server.on('request', app);
+
+    server.listen(appPort, function () {
+        console.log(`http/ws server listening on ${appPort}`);
+    });
+
+
 }
 
 
