@@ -7,8 +7,8 @@ on:
 name: Build Application
 
 jobs:
-  deploy:
-    name: Deploy
+  docker:
+    name: Docker
     runs-on: ubuntu-latest
 
     steps:
@@ -39,3 +39,24 @@ jobs:
           echo "Pushing image to ECR..."
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    
+    - name: Checkout source code
+      uses: actions/checkout@v1
+
+    - name: Generate deployment package
+      run: zip -r deploy.zip . -x '*.git*'
+      
+    - name: Deploy to EB
+      uses: einaregilsson/beanstalk-deploy@v16
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        application_name:  degg-sbox
+        environment_name:  degg-sbox
+        version_label: ${{github.run_number}}
+        region: us-east-1
+        deployment_package: deploy.zip
